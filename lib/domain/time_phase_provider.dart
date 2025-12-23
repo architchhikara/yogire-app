@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../data/location_service.dart';
 import '../data/sun_time_service.dart';
+import '../core/notification_service.dart';
 
 enum DayPhase {
   brahmaMuhurtam,
@@ -66,9 +67,31 @@ class TimePhaseProvider extends ChangeNotifier {
         _brahmaMuhurtamStart = _sunrise!.subtract(const Duration(minutes: 96));
         _brahmaMuhurtamEnd = _sunrise!.subtract(const Duration(minutes: 48));
         _updatePhase();
+        _scheduleBMRerninder();
       }
     }
     notifyListeners();
+  }
+
+  void _scheduleBMRerninder() {
+    if (_brahmaMuhurtamStart != null) {
+      // Schedule for tomorrow if today's time passed, or today if future
+      final now = DateTime.now();
+      DateTime scheduledTime = _brahmaMuhurtamStart!;
+
+      if (scheduledTime.isBefore(now)) {
+        // Since sun times are for "today", if passed, we can't accurately predict tomorrow's
+        // without fetching again. But for simplicity, we add 24 hours.
+        scheduledTime = scheduledTime.add(const Duration(hours: 24));
+      }
+
+      NotificationService().scheduleNotification(
+        id: 100,
+        title: "Brahma Muhurtam",
+        body: "It's time to wake up! (96 mins before sunrise)",
+        scheduledDate: scheduledTime,
+      );
+    }
   }
 
   void _updatePhase() {

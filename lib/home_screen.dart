@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'features/dashboard/dashboard_screen.dart';
 import 'features/dwijas/dwijas_screen.dart';
+import 'core/notification_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,6 +12,14 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService().requestPermissions();
+    });
+  }
 
   final List<Widget> _screens = [
     const DashboardScreen(),

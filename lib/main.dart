@@ -4,9 +4,11 @@ import 'core/theme.dart';
 import 'home_screen.dart';
 import 'domain/time_phase_provider.dart';
 import 'data/task_repository.dart';
+import 'core/notification_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService().init();
   runApp(const YogiReCompanionApp());
 }
 

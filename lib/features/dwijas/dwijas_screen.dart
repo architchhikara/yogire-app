@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../data/task_repository.dart';
+import '../gamification/sadhana_tree_widget.dart';
+import '../gamification/progress_chart.dart';
+import '../settings/reminders_screen.dart';
 
 class DwijasScreen extends StatefulWidget {
   const DwijasScreen({super.key});
@@ -12,13 +15,29 @@ class DwijasScreen extends StatefulWidget {
 
 class _DwijasScreenState extends State<DwijasScreen> {
   DateTime _selectedDate = DateTime.now();
+  bool _showStats = false;
+  int _streak = 0;
+  List<double> _history = [];
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<TaskRepository>(context, listen: false).loadTasks(_selectedDate);
+      _loadData();
     });
+  }
+
+  Future<void> _loadData() async {
+    final repo = Provider.of<TaskRepository>(context, listen: false);
+    await repo.loadTasks(_selectedDate);
+    final streak = await repo.calculateCurrentStreak();
+    final history = await repo.getCompletionHistory(7);
+    if (mounted) {
+      setState(() {
+        _streak = streak;
+        _history = history;
+      });
+    }
   }
 
   @override
@@ -26,8 +45,53 @@ class _DwijasScreenState extends State<DwijasScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Dwijas Daily Routine"),
+        actions: [
+          IconButton(
+            icon: Icon(_showStats ? Icons.list : Icons.bar_chart),
+            onPressed: () {
+              setState(() {
+                _showStats = !_showStats;
+              });
+              if (_showStats) _loadData();
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+               Navigator.push(context, MaterialPageRoute(builder: (_) => const RemindersScreen()));
+            },
+          ),
+        ],
       ),
-      body: Column(
+      body: _showStats ? _buildStatsView() : _buildTaskListView(),
+      floatingActionButton: !_showStats ? FloatingActionButton(
+        onPressed: () {
+          _showAddTaskDialog(context);
+        },
+        child: const Icon(Icons.add),
+      ) : null,
+    );
+  }
+
+  Widget _buildStatsView() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Text("Consistency Tracker", style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: 20),
+          SadhanaTreeWidget(streakDays: _streak),
+          const SizedBox(height: 30),
+          const Text("Last 7 Days"),
+          const SizedBox(height: 10),
+          ProgressChart(history: _history),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskListView() {
+    return Column(
         children: [
           // Date Selector (simplified)
           Padding(
@@ -93,14 +157,7 @@ class _DwijasScreenState extends State<DwijasScreen> {
             ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _showAddTaskDialog(context);
-        },
-        child: const Icon(Icons.add),
-      ),
-    );
+      );
   }
 
   Icon _getIconForTask(String title) {
